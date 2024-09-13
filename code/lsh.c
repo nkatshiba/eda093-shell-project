@@ -29,9 +29,14 @@
 
 #include "parse.h"
 
+#include <signal.h>
+
 static void print_cmd(Command *cmd);
 static void print_pgm(Pgm *p);
 void stripwhite(char *);
+int c;
+
+
 
 int main(void)
 {
@@ -40,8 +45,14 @@ int main(void)
     char *line;
     line = readline("> ");
 
+    if (line == NULL) {
+        printf("\n(EOF) Exiting...\n");
+        break;
+    }
+
     // Remove leading and trailing whitespace from the line
     stripwhite(line);
+
 
     // If stripped line not blank
     if (*line)
@@ -59,11 +70,9 @@ int main(void)
         printf("Parse ERROR\n");
       }
     }
-
     // Clear memory
     free(line);
   }
-
   return 0;
 }
 
@@ -138,3 +147,4 @@ void stripwhite(char *string)
 
   string[++i] = '\0';
 }
+
