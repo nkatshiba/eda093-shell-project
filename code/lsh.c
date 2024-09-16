@@ -31,11 +31,14 @@
 
 #include <signal.h>
 
+#include <sys/wait.h>
+
 static void print_cmd(Command *cmd);
 static void print_pgm(Pgm *p);
 void stripwhite(char *);
 int c;
 
+void execute_command(char *);
 
 
 int main(void)
@@ -64,6 +67,10 @@ int main(void)
       {
         // Just prints cmd
         print_cmd(&cmd);
+        /*if (system(line) == -1) {*/
+        /*    perror("system");*/
+        /*}*/
+        execute_command(line);
       }
       else
       {
@@ -148,3 +155,33 @@ void stripwhite(char *string)
   string[++i] = '\0';
 }
 
+void execute_command(char *command) {
+    pid_t pid = fork();
+    if (pid == -1) {
+        perror("fork");
+        exit(EXIT_FAILURE);
+    } else if (pid == 0) {
+        // child
+        char *argv[64]; // Assuming a maximum of 64 arguments
+        int i = 0;
+
+        // GPT
+        char *token = strtok(command, " ");
+        while (token != NULL && i < 63) { // Leave space for NULL terminator
+            argv[i++] = token;
+            token = strtok(NULL, " ");
+        }
+        argv[i] = NULL; // NULL-terminate the argument list
+        // \\ GPT
+
+        // exec
+        if (execvp(argv[0], argv) == -1) {
+            perror("execvp");
+            exit(EXIT_FAILURE);
+        }
+    } else {
+        // parent
+        int status;
+        waitpid(pid, &status, 0);
+    }
+}
