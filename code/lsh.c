@@ -66,11 +66,16 @@ int main(void)
       if (parse(line, &cmd) == 1)
       {
         // Just prints cmd
-        print_cmd(&cmd);
+        //print_cmd(&cmd);
         /*if (system(line) == -1) {*/
         /*    perror("system");*/
         /*}*/
-        execute_command(line);
+        if (strchr(line, '|')) {
+          execute_pipes(line);
+        }
+        else {
+          execute_command(line);
+        }
       }
       else
       {
@@ -184,4 +189,60 @@ void execute_command(char *command) {
         int status;
         waitpid(pid, &status, 0);
     }
+}
+
+
+void execute_pipes(char *command) {
+  int pipefd[2];    //array used to return two fd's: the read and write ends of the pipe
+
+  pid_t pid;    
+
+  int prev_input_fd = 0;    //fd used to store the input from previous command
+
+  char *cmd = strtok(command, "|");    //separates command using the pipe sign as a separator, points at first command
+
+  while (cmd != NULL) {    //iterate for every command
+    if (pipe(pipefd) == -1) {  //create pipe
+      perror("pipe");
+      exit(EXIT_FAILURE);
+    }
+
+    pid = fork();    //fork
+    if (pid == -1) {
+      perror("fork");
+      exit(EXIT_FAILURE);
+    }
+
+    if (pid == 0) {    //child 
+      if (prev_input_fd != 0) {    //check if there is previous input from a pipe
+        dup2(prev_input_fd, STDIN_FILENO);    //set read end of pipe to be standard input for the previous command input
+        close(prev_input_fd);    //close read end of pipe
+      }
+      
+      if (strtok(NULL, "|") != NULL) {    //check if this is the last command
+        dup2(pipefd[1], STDOUT_FILENO);    //iset write end of pipe to be standard input for the next command
+      }                                    //NOTE: if this is last command, it sends the output to terminal instead of redirecting the output to the pipe
+      
+      //avoid leaking file descriptors
+      close(pipefd[0]);    //close read end
+      close(pipefd[1]);    //close write end
+
+      execute_command(cmd);    //execute command
+      
+      exit(EXIT_SUCCESS);
+    }
+    else {    //parent
+      wait(NULL);    //wait for child
+
+      close(pipefd[1]);    //close write end of pipe
+
+      prev_input_fd = pipefd[0];    //save read end of pipe for next loop
+
+      cmd = strtok(NULL,"|");    //cmd points at the next command for next loop
+    }
+  } 
+
+if (prev_input_fd != 0) {
+  close(prev_input_fd);    //close remaining fd to avoid leaks
+}
 }
