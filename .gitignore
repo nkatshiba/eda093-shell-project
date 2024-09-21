@@ -250,3 +250,8 @@ reports/
 
 ## macOS ##
 .DS_Store
+
+# pyvenv
+pyvenv.cfg
+
+pyproject.toml
