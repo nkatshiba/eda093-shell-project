@@ -255,3 +255,6 @@ reports/
 pyvenv.cfg
 
 pyproject.toml
+
+tests/bin/
+tests/lib64
