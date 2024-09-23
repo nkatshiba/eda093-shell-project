@@ -9,10 +9,11 @@
  * Add appropriate comments in your code to make it
  * easier for us while grading your assignment.
  *
- * Using assert statements in your code is a great way to catch errors early and make debugging easier.
- * Think of them as mini self-checks that ensure your program behaves as expected.
- * By setting up these guardrails, you're creating a more robust and maintainable solution.
- * So go ahead, sprinkle some asserts in your code; they're your friends in disguise!
+ * Using assert statements in your code is a great way to catch errors early and
+ * make debugging easier. Think of them as mini self-checks that ensure your
+ * program behaves as expected. By setting up these guardrails, you're creating
+ * a more robust and maintainable solution. So go ahead, sprinkle some asserts
+ * in your code; they're your friends in disguise!
  *
  * All the best!
  */
@@ -20,11 +21,12 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <readline/readline.h>
 #include <readline/history.h>
+#include <readline/readline.h>
+#include <string.h>
 
-// The <unistd.h> header is your gateway to the OS's process management facilities.
+// The <unistd.h> header is your gateway to the OS's process management
+// facilities.
 #include <unistd.h>
 
 #include "parse.h"
@@ -175,8 +177,7 @@ void signal_handler(int signum) {
  *
  * Helper function, no need to change. Might be useful to study as inspiration.
  */
-static void print_cmd(Command *cmd_list)
-{
+static void print_cmd(Command *cmd_list) {
   printf("------------------------------\n");
   printf("Parse OK\n");
   printf("stdin:      %s\n", cmd_list->rstdin ? cmd_list->rstdin : "<none>");
@@ -191,14 +192,10 @@ static void print_cmd(Command *cmd_list)
  *
  * Helper function, no need to change. Might be useful to study as inpsiration.
  */
-static void print_pgm(Pgm *p)
-{
-  if (p == NULL)
-  {
+static void print_pgm(Pgm *p) {
+  if (p == NULL) {
     return;
-  }
-  else
-  {
+  } else {
     char **pl = p->pgmlist;
 
     /* The list is in reversed order so print
@@ -206,43 +203,63 @@ static void print_pgm(Pgm *p)
      */
     print_pgm(p->next);
     printf("            * [ ");
-    while (*pl)
-    {
+    while (*pl) {
       printf("%s ", *pl++);
     }
     printf("]\n");
   }
 }
 
-
 /* Strip whitespace from the start and end of a string.
  *
  * Helper function, no need to change.
  */
-void stripwhite(char *string)
-{
+void stripwhite(char *string) {
   size_t i = 0;
 
-  while (isspace(string[i]))
-  {
+  while (isspace(string[i])) {
     i++;
   }
 
-  if (i)
-  {
+  if (i) {
     memmove(string, string + i, strlen(string + i) + 1);
   }
 
   i = strlen(string) - 1;
-  while (i > 0 && isspace(string[i]))
-  {
+  while (i > 0 && isspace(string[i])) {
     i--;
   }
 
   string[++i] = '\0';
 }
 
+
+/* strcmp helper */
+int stringEquals(const char *a, const char *b) { return strcmp(a, b) == 0; }
+// function pointer
+int (*compare)(const char *, const char *) = stringEquals;
+
+
+
 void execute_command(Command *cmd) {
+  
+  print_cmd(cmd);
+  if (compare(cmd->pgm->pgmlist[0], "exit")) {
+    printf("exit\n");
+    terminate_bg_processes();
+    exit(EXIT_SUCCESS);
+  } else if (compare(cmd->pgm->pgmlist[0], "cd")) {
+    if (cmd->pgm->pgmlist[1] == NULL) {
+      chdir(getenv("HOME"));
+    } else {
+      if (chdir(cmd->pgm->pgmlist[1]) != 0) {
+        perror("chdir");
+      }
+    }
+    return; 
+  }
+
+
     pid_t pid = fork();
     if (pid == -1) {
         perror("fork");
