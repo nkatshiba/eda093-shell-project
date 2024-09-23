@@ -105,7 +105,7 @@ int main(void) {
                 execute_pipes(line);
               }
               else {
-                execute_command(line);
+                execute_command(&cmd);
               }
             }
             else
@@ -311,7 +311,13 @@ void execute_pipes(char *command) {
       close(pipefd[0]);    //close read end
       close(pipefd[1]);    //close write end
 
-      execute_command(cmd);    //execute command
+      Command cmd_struct;
+      if (parse(cmd, &cmd_struct) == 1) {
+          execute_command(&cmd_struct);    // execute parsed command
+      } else {
+          fprintf(stderr, "Error parsing command: %s\n", cmd);
+          exit(EXIT_FAILURE);
+      }
       
       exit(EXIT_SUCCESS);
     }
