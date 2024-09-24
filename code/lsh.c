@@ -36,6 +36,8 @@
 #include <sys/wait.h>
 #include <errno.h>
 
+#include <fcntl.h>
+
 static void print_cmd(Command *cmd);
 static void print_pgm(Pgm *p);
 void stripwhite(char *);
@@ -103,11 +105,11 @@ int main(void) {
               /*if (system(line) == -1) {*/
               /*    perror("system");*/
               /*}*/
-              if (strchr(line, '|')) {
-                execute_pipes(line);
+              if (strchr(line, '|')) {  //check for pipes
+                execute_pipes(line);  //execute command with pipes
               }
               else {
-                execute_command(&cmd);
+                execute_command(&cmd);  //execute command
               }
             }
             else
@@ -243,7 +245,7 @@ int (*compare)(const char *, const char *) = stringEquals;
 
 void execute_command(Command *cmd) {
   
-  print_cmd(cmd);
+  //print_cmd(cmd);
   if (compare(cmd->pgm->pgmlist[0], "exit")) {
     printf("exit\n");
     terminate_bg_processes();
@@ -275,7 +277,8 @@ void execute_command(Command *cmd) {
             signal(SIGINT, SIG_IGN); //ignore interrupts
              
         }
-        execvp(cmd->pgm->pgmlist[0], cmd->pgm->pgmlist);
+        execute_redirect(cmd);  //execute i/o redirect if neeeded
+        execvp(cmd->pgm->pgmlist[0], cmd->pgm->pgmlist);  //execute command
         perror("execvp error");
         exit(EXIT_FAILURE);
     } else {
@@ -330,6 +333,7 @@ void execute_pipes(char *command) {
 
       Command cmd_struct;
       if (parse(cmd, &cmd_struct) == 1) {
+          execute_redirect(&cmd_struct);    //execute i/o redirection if
           execute_command(&cmd_struct);    // execute parsed command
       } else {
           fprintf(stderr, "Error parsing command: %s\n", cmd);
@@ -352,4 +356,32 @@ void execute_pipes(char *command) {
 if (prev_input_fd != 0) {
   close(prev_input_fd);    //close remaining fd to avoid leaks
 }
+}
+
+void execute_redirect(Command *cmd) {
+  //input (<)
+  if (cmd->rstdin) {    //check if command has input file
+    assert(strlen(cmd->rstdin) > 0);    
+    int inputFile = open(cmd-> rstdin, O_RDONLY);    //read file
+    assert(inputFile != -1);
+    if (inputFile == -1) {
+      perror("Could not open input file");
+      exit(EXIT_FAILURE);
+    }
+    dup2(inputFile, STDIN_FILENO);    //redirect standard input to inputFile
+    close(inputFile);    //close file 
+  }
+
+  //output (>)
+  if (cmd->rstdout) {    //check if command has output file also
+    assert(strlen(cmd->rstdout) > 0);
+    int outputFile = open(cmd->rstdout, O_WRONLY | O_CREAT | O_TRUNC, 0664);    //write to file (create if it does not exist, truncate it when it is opened)
+    assert(outputFile != -1);
+    if (outputFile == -1) {
+      perror("Could not open output file");
+      exit(EXIT_FAILURE);
+    }
+    dup2(outputFile, STDOUT_FILENO);    //redirect standard output to outputFile
+    close(outputFile);    //close file
+  }
 }
