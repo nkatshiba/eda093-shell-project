@@ -67,31 +67,10 @@ int main(void) {
                     printf("\n(EOF) Exiting...\n");
                     terminate_bg_processes(); //exit cleanly by forcefully terminating any potential background processes
                     exit(0); 
-
-                   /* if (bg_count > 0) {
-                        printf("\n(EOF) Cannot exit: background processes running\n");
-                        
-                    } else {
-                        printf("\n(EOF) Exiting...\n");
-                        exit(0); 
-                    }
-                    continue; */
                 }
 
         // Remove leading and trailing whitespace from the line
         stripwhite(line);
-
-       /* if (*line) { //innan pipes
-            add_history(line);
-
-            Command cmd;
-            if (parse(line, &cmd) == 1) {
-                print_cmd(&cmd);
-                execute_command(&cmd);
-            } else {
-                printf("Parse ERROR\n");
-            }
-        }*/
 
            if (*line) //med pipes
           {
@@ -324,7 +303,7 @@ void execute_pipes(char *command) {
       }
       
       if (strtok(NULL, "|") != NULL) {    //check if this is the last command
-        dup2(pipefd[1], STDOUT_FILENO);    //iset write end of pipe to be standard input for the next command
+        dup2(pipefd[1], STDOUT_FILENO);    //set write end of pipe to be standard input for the next command
       }                                    //NOTE: if this is last command, it sends the output to terminal instead of redirecting the output to the pipe
       
       //avoid leaking file descriptors
@@ -375,7 +354,7 @@ void execute_redirect(Command *cmd) {
   //output (>)
   if (cmd->rstdout) {    //check if command has output file also
     assert(strlen(cmd->rstdout) > 0);
-    int outputFile = open(cmd->rstdout, O_WRONLY | O_CREAT | O_TRUNC, 0664);    //write to file (create if it does not exist, truncate it when it is opened)
+    int outputFile = open(cmd->rstdout, O_WRONLY | O_CREAT | O_TRUNC, 0664);    //write to file (create if it does not exist, truncate it when it is opened and set permissions)
     assert(outputFile != -1);
     if (outputFile == -1) {
       perror("Could not open output file");
