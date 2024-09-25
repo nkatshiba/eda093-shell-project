@@ -1,0 +1,40 @@
+First, we implemented Ctrl-D Handling. The second feature implemented was the execution of Basic Commands. Once basic commands could be executed, it was possible to implement support for Piping. The next specification was Background Execution. While implementing this, we ensured that No Zombies would hold. Then, the functions for Built-ins were added. After this, Ctrl-C Handling was added. Finally, we added support for I/O Redirection. It should however be noted that this was the order in which specifications were merged, and tasks were distributed among the team members. Therefore, in a sense some features were implemented concurrently since certain specifications could be implemented independently of each other. 
+
+When working with Ctrl-D Handling, it was initially challenging to understand how the terminal recognizes the command ctrl d, since you can only write strings to the terminal. We solved this once we understood that ctrl d serves as an EOF signal, which could be detected within the main loop as a null string.
+
+Ctrl-C allows users to interrupt running foreground processes. To achieve this effect we used the SIGINT signal, which is the interrupt signal generated when the user presses Ctrl-C. The variable foreground_pid is used to track if there are any valid foreground processes running, as the variable is updated with the PID of the process at the start of one, and updated with the invalid value -1 if there are no active foreground processes.
+
+The function signal_handler() listens for the interrupt signal SIGINT and if there are any active foreground processes by checking the foreground_pid value, and interrupts (kills) that process if Ctrl-C is pressed. The signal_handler() also handles the SIGCHLD signal in order to prevent zombie processes, as the SIGCHLD signal is sent to the parent process whenever a child process terminates. In the signal handling function this signal is mainly used to reap zombie background processes, as the execute_command function handles the foreground processes and has its own check to reap zombie processes. In order to keep track of all active background processes, an array of background process PIDs is used and updated continuously as new processes are created or if the SIGCHLD signal is received, indicating a child process has been terminated. 
+
+Both in the case of foreground processes and background processes, the waitpid() function is used in order to set whether the process should block any other processes using the argument 0 (in the case of a foreground process) to wait for the process to finish before continuing, or using the argument WNOHANG to immediately continue which allows background processes. By calling waitpid() the parent process collects the exit status of the child process, preventing it from becoming a zombie process. Whether a command will be blocking further processes or not is decided by the background flag &. 
+
+The call to fork() creates an exact duplicate of the parent process and its return value is used to distinguish between whether a child or parent process is running as the child process will always have PID = 0. If the fork() return value is a positive integer, this indicates we are still in the parent process and then the parent determines how to handle the child, which is also dependent on whether the child process is allowed to run in the background or not.
+
+One challenge that occurred while implementing the functionality for concurrent background and foreground processes was to figure out why our solution would not pass the test_CTRL_C_with_fg_and_bg: Tests lsh's response to a CTRL-C signal with concurrent foreground and background processes. test. It was not completely clear from the instructions that we were supposed to kill any background processes before exiting by Ctrl-D, and therefore we had to try out different solutions until we figured this out. It turned out the week after that this was actually a bug in the test which made more sense, but after already having implemented a functional version of the code that passed the original test, we decided to leave it as it is. 
+
+The takeaway from this would be that while the tests were very useful to check that our implementation worked as we expected, it could also be dangerous to rely too heavily on them. Relying too much on the tests could result in, as in our case, spending a lot of time trying to fix an issue that was actually not an issue, or perhaps also missing serious bugs and errors that there were no tests available for. 
+
+When implementing support for Piping, we encountered a few challenges. We found it difficult to know when to close each pipe end to avoid leaking file descriptors, especially since the previous input for each loop made is saved. This problem was solved once we gained a better understanding of pipes. 
+It was challenging to figure out how to send the final output of the command to the terminal, instead of redirecting it endlessly. Another difficulty was retrieving the next command after each loop. Both of these problems could be solved by understanding and utilizing strtok(NULL, |) in order to move the command pointer.
+
+For piping, the test cases in the current state can be solved by implementing piping for one or two pipes. We feel a test case to ensure that multiple pipes can be handled is missing. 
+
+For I/O redirection, we encountered difficulties in using the open() function when creating the file descriptor for the output because we were not sure which flags to use. The man page was extensive, and we were not familiar with truncating. In the lab instructions it said that when using open() for file-creation, all flags can be set to 0. We assumed that this meant setting the third argument of open() to 0, but we received file-creation errors (open() returned -1). We had to manually set the flags to O_WRONLY | O_CREAT | O_TRUNC, 0664 in order to properly create, truncate and write and read to the files. 
+
+In order to for the user to be able to call the built-in functions we declared a function wrapping around strcmp which was implemented in order to compare the argument from the user against pre-defined strings, e.g. exit and cd.
+
+Furthermore, when implementing the built-in cd command we had to handle it by specifying two cases. One case when the second argument contained a path and one where the second argument was empty. When the second argument was empty, the command should take us to our home directory. Regarding the implementation of the cd command, this was the only minor challenge when implementing it. 
+
+Regarding the other built-in function, i.e. exit we had to make sure that we terminated all background processes before exiting the shell. 
+
+One thing that helped a lot when implementing the built-in functions were to look how already well established shells handle built-in, like bash for example. 
+
+Another thing that we always had to have in mind when implementing new features were to not have the shell leave any zombie processes behind.
+
+We very much appreciated the structure of the lab. Using the provided skeleton code to run and test the program from the beginning made it fun to work with the lab, since features could be added and tested immediately. In other courses, it is difficult and large amounts of time are often spent building and attempting to run the code.   
+
+We also believe that it was a very large benefit to us that all the instructions were specified within the skeleton-code-directory. Due to this, it was very easy to compare the development at any stage against the specifications at all times.
+
+The automated tests were very useful. When making small adjustments, the tests saved us great amounts of time because we did not have to input each test manually over and over again. The website function was also useful in order to quickly detect which tests needed to be addressed. 
+
+According to the instructions and specifications listed, we believe that we have met all specifications. All tests pass when running the code and all manual tests give expected results.
